@@ -25,7 +25,7 @@ Route::get('/common_users/{username}', 'App\Http\Controllers\CommonUserControlle
 Route::post('/common_users', 'App\Http\Controllers\CommonUserController@registerUser');
 Route::put('/common_users/{username}', 'App\Http\Controllers\CommonUserController@update');
 Route::post('/common_users/login', 'App\Http\Controllers\CommonUserController@login');
-
+Route::delete('/common_users', 'App\Http\Controllers\CommonUserController@delete');
 //notification routes
 Route::get('/notifications', 'App\Http\Controllers\NotificationController@index');
 Route::post('/notifications', 'App\Http\Controllers\NotificationController@createNotification');
@@ -38,8 +38,11 @@ Route::get('/vehicles', 'App\Http\Controllers\VehicleController@getVehicles');
 Route::post('/vehicles', 'App\Http\Controllers\VehicleController@addVehicle');
 Route::get('/vehicles/category', 'App\Http\Controllers\VehicleController@getCategories');
 Route::post('/vehicles/category', 'App\Http\Controllers\VehicleController@addCategory');
+Route::delete('/vehicles/category','App\Http\Controllers\VehicleController@deleteCategory');
+Route::put('/vehicles/category','App\Http\Controllers\VehicleController@updateCategory');
 Route::delete('/vehicles', 'App\Http\Controllers\VehicleController@deleteVehicle');
 Route::put('/vehicles', 'App\Http\Controllers\VehicleController@updateVehicle');
+
 
 
 

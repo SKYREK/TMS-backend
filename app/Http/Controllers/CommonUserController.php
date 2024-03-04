@@ -12,7 +12,20 @@ use Illuminate\Support\Facades\Log;
 class CommonUserController extends Controller
 {
     public function index(){
-        return CommonUser::all();
+        $userList =  CommonUser::all();
+        //add salary to driver users
+        foreach($userList as $user){
+            if($user->account_type == 'driver'){
+                $driver = Driver::where('username', $user->username)->first();
+                $user['salary'] = $driver->salary;
+            }else if($user->account_type == 'customer'){
+                $customer = Customer::where('username', $user->username)->first();
+                $user['address'] = $customer->address;
+                $user['phone'] = $customer->phone;
+                $user['email'] = $customer->email;
+            }
+        }
+        return $userList;
     }
     public function show($username){
         return CommonUser::find($username);
@@ -25,7 +38,8 @@ class CommonUserController extends Controller
         $commonUser->update($request->all());
         return $commonUser;
     }
-    public function delete(Request $request, $username){
+    public function delete(Request $request){
+        $username = $request->input('username');
         $commonUser = CommonUser::findOrFail($username);
         $commonUser->delete();
         return 204;

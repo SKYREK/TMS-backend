@@ -67,6 +67,20 @@ class VehicleController extends Controller
         $vehicle->update($request->all());
         return $vehicle;
     }
+    //delete category
+    public function deleteCategory(Request $request){
+        $name = $request->name;
+        $category = Category::findOrFail($name);
+        $category->delete();
+        return 204;
+    }
+    //update category
+    public function updateCategory(Request $request){
+        $name = $request->name;
+        $category = Category::findOrFail($name);
+        $category->update($request->all());
+        return $category;
+    }
 
 
 }
