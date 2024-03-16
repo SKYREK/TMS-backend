@@ -8,6 +8,14 @@ use App\Models\Customer;
 use App\Models\Driver;
 use App\Models\LoginRecord;
 use Illuminate\Support\Facades\Log;
+use App\Models\LeaveRequest;
+use App\Models\AdvanceRequest;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Mail\Message;
+use App\Models\Booking;
+use App\Models\Vehicle;
+
+
 
 class CommonUserController extends Controller
 {
@@ -33,9 +41,33 @@ class CommonUserController extends Controller
     public function store(Request $request){
         return CommonUser::create($request->all());
     }
-    public function update(Request $request, $username){
-        $commonUser = CommonUser::findOrFail($username);
-        $commonUser->update($request->all());
+    //get full user info by username
+    public function getUserInfo(Request $request){
+        $username = $request->username;
+        $user = CommonUser::where('username', $username)->first();
+        if($user->account_type == 'customer'){
+            $customer = Customer::where('username', $username)->first();
+            $user['address'] = $customer->address;
+            $user['phone'] = $customer->phone;
+            $user['email'] = $customer->email;
+        }else if($user->account_type == 'driver'){
+            $driver = Driver::where('username', $username)->first();
+            $user['salary'] = $driver->salary;
+        }
+        return $user;
+    }
+    public function update(Request $request){
+        $commonUser = CommonUser::findOrFail($request->username);
+        $commonUser->name = $request->name;
+        $commonUser->gender = $request->gender;
+        $commonUser->save();
+        //if user type is customer save customer details
+        if($commonUser->account_type == 'customer'){
+            $customer = Customer::where('username', $commonUser->username)->first();
+            $customer->email = $request->email;
+            $customer->phone = $request->phone;
+            $customer->save();
+        }
         return $commonUser;
     }
     public function delete(Request $request){
@@ -156,4 +188,99 @@ class CommonUserController extends Controller
         }
 
     }
+    //change name of a user
+    public function changeName(Request $request){
+        try{
+            //validate
+            $request->validate([
+                'username' => 'required',
+                'name' => 'required'
+            ]);
+            $user = CommonUser::where('username', $request->username)->firstOrFail();
+            $user->name = $request->name;
+            $user->save();
+            return response()->json($user, 200);
+        }catch(\Exception $e){
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+    public function getSalaryReport(Request $request){
+        //get all leaves for current month by username
+        $leaves = LeaveRequest::where('username', $request->username)->whereMonth('date', date('m'))->where('status',"approved")->get();
+        //get all advances for current month by username
+        $advances = AdvanceRequest::where('username', $request->username)->whereMonth('date', date('m'))->where('status',"approved")->get();
+        //get driver
+        $driver = Driver::where('username', $request->username)->first();
+        //create response with leaves advances and driver
+        $response = [
+            'leaves' => $leaves,
+            'advances' => $advances,
+            'driver' => $driver
+        ];
+        return response()->json($response, 200);
+    }
+    public function getAllDrivers(){
+        return CommonUser::where('account_type', 'driver')->get();
+    }
+    public function sendEmail(Request $request)
+    {
+        $email = $request->email;
+        $code = $request->code;
+        $toEmail = $email;
+        $subject = 'Test Email';
+        $message = 'Use following code as your verification code: '.$code.'';
+
+        Mail::raw($message, function ($mail) use ($toEmail, $subject) {
+            $mail->to($toEmail)
+                ->subject($subject);
+        });
+
+        return "Email sent successfully!";
+    }
+    //change password
+    public function changePassword(Request $request){
+        try{
+            //validate
+            $request->validate([
+                'username' => 'required',
+                'password' => 'required'
+            ]);
+            $user = CommonUser::where('username', $request->username)->firstOrFail();
+            $user->password = bcrypt($request->password);
+            $user->save();
+            return response()->json($user, 200);
+        }catch(\Exception $e){
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+    //get counts of all bookings all drivers all customers and all vehicles
+    public function getBookingCounts(){
+        $bookings = Booking::all();
+        $drivers = CommonUser::where('account_type', 'driver')->get();
+        $customers = CommonUser::where('account_type', 'customer')->get();
+        $vehicles = Vehicle::all();
+        $response = [
+            'bookings' => count($bookings),
+            'drivers' => count($drivers),
+            'customers' => count($customers),
+            'vehicles' => count($vehicles)
+        ];
+        return response()->json($response, 200);
+    }
+    public function getDriverDash(Request $request){
+        $username = $request->username;
+        $driver = Driver::where('username', $username)->first();
+        $bookings = Booking::where('driver_username', $username)->get();
+        $leaves = LeaveRequest::where('username', $username)->where('status', 'approved')->get();
+        $advances = AdvanceRequest::where('username', $username)->where('status', 'approved')->get();
+        $response = [
+            'driver' => $driver,
+            'bookings' => count($bookings),
+            'leaves' => count($leaves),
+            'advances' => count($advances)
+        ];
+        return response()->json($response, 200);
+    }
 }
+//det drivers booking_count leave_count and advance_count by username
+
